@@ -1,0 +1,11 @@
+{
+  "type": "minestuck:grist_cost",
+  "grist_cost": {
+    "minestuck:build": 28,
+    "minestuck:iodine": 10,
+    "minestuck:shale": 32
+  },
+  "ingredient": {
+    "item": "alchemyexpanded:dito_detritus"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "alchemyexpanded.item_group.main": "Alchemy Expanded Main",
+  "alchemyexpanded.item_group.food": "Alchemy Expanded Food",
+  "alchemyexpanded.item_group.weapons": "Alchemy Expanded Weapons",
+  "item.alchemyexpanded.cursed_tape": "Cursed VHS Tape",
+  "item.alchemyexpanded.flay_doh": "Flay-Doh",
+  "item.alchemyexpanded.dito": "Nacho Cheese Dito",
+  "item.alchemyexpanded.dito_detritus": "Godawful Gooey Dito Detritus",
+  "item.alchemyexpanded.ghost_in_the_machine": "Ghost in the Machine",
+  "item.alchemyexpanded.tildeath_do_us_part": "~ATH Do Us Part",
+  "item.alchemyexpanded.bell_bat": "Bell Bat",
+  "item.alchemyexpanded.dead_ringer": "Dead Ringer",
+  "item.alchemyexpanded.revolver": "Revolver",
+  "info.alchemyexpanded.gun.damage": "Damage: %s",
+  "info.alchemyexpanded.gun.spread": "Spread: %s",
+  "info.alchemyexpanded.gun.amount": "Projectiles: %s",
+  "info.alchemyexpanded.gun.rate": "Fire Rate: %s",
+  "info.alchemyexpanded.gun.ammo_current": "Ammo Left: %s",
+  "info.alchemyexpanded.gun.ammo_max": "Ammo Max: %s"
+}
