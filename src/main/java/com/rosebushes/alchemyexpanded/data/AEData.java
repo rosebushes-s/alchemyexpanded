@@ -1,8 +1,10 @@
 package com.rosebushes.alchemyexpanded.data;
 
-import com.mraof.minestuck.data.recipe.MinestuckRecipeProvider;
+import com.rosebushes.alchemyexpanded.data.loot_table.AELootTableProvider;
 import com.rosebushes.alchemyexpanded.recipe.AERecipeProvider;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -27,8 +29,15 @@ public class AEData {
         DataGenerator gen = event.getGenerator();
         PackOutput output = gen.getPackOutput();
         ExistingFileHelper fileHelper = event.getExistingFileHelper();
+        DatapackBuiltinEntriesProvider builtinEntries = (DatapackBuiltinEntriesProvider)gen.addProvider(event.includeServer(), new DatapackBuiltinEntriesProvider(output, event.getLookupProvider(), registrySetBuilder(), Set.of("alchemyexpanded")));
+        CompletableFuture<HolderLookup.Provider> lookupProvider = builtinEntries.getRegistryProvider();
 
         gen.addProvider(event.includeServer(), new AERecipeProvider(output));
+        gen.addProvider(event.includeServer(), new AEDamageTypeProvider.Tags(output, lookupProvider, fileHelper));
+        gen.addProvider(event.includeServer(), AELootTableProvider.create(output));
+    }
 
+    private static RegistrySetBuilder registrySetBuilder() {
+        return new RegistrySetBuilder().add(Registries.DAMAGE_TYPE, AEDamageTypeProvider::register);
     }
 }

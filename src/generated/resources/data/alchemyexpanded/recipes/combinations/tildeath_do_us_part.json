@@ -6,7 +6,7 @@
   "input2": {
     "item": "minestuck:tilldeath_handbook"
   },
-  "mode": "or",
+  "mode": "and",
   "output": {
     "item": "alchemyexpanded:tildeath_do_us_part"
   }

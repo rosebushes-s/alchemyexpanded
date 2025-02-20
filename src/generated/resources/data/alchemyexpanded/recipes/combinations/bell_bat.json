@@ -6,7 +6,7 @@
   "input2": {
     "item": "minecraft:bell"
   },
-  "mode": "or",
+  "mode": "and",
   "output": {
     "item": "alchemyexpanded:bell_bat"
   }

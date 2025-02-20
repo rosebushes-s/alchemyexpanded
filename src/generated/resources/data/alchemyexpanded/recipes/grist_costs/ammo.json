@@ -1,0 +1,11 @@
+{
+  "type": "minestuck:grist_cost",
+  "grist_cost": {
+    "minestuck:build": 20,
+    "minestuck:rust": 6,
+    "minestuck:sulfur": 10
+  },
+  "ingredient": {
+    "item": "alchemyexpanded:ammo"
+  }
+}

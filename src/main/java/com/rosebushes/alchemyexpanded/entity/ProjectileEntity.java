@@ -1,69 +1,186 @@
 package com.rosebushes.alchemyexpanded.entity;
 
-import com.mraof.minestuck.player.Echeladder;
-import com.rosebushes.alchemyexpanded.item.GunWeaponItem;
+import com.mraof.minestuck.client.util.MagicEffect;
+import com.mraof.minestuck.network.MagicRangedEffectPacket;
+import com.rosebushes.alchemyexpanded.item.AEItems;
+import com.rosebushes.alchemyexpanded.network.BulletEffectPacket;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ItemSupplier;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
+import net.minecraft.world.phys.*;
+import net.neoforged.neoforge.network.PacketDistributor;
 
-public class ProjectileEntity extends Entity implements IEntityWithComplexSpawn {
+//code snippets taken from GunsWithoutRoses by Lykrast under MIT license.
+public class ProjectileEntity extends Projectile implements ItemSupplier {
 
-    protected int ownerID;
-    protected LivingEntity owner;
-    private ItemStack gun = ItemStack.EMPTY;
+    private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK = SynchedEntityData.defineId(ProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
+    protected double damage;
     private ItemStack item = ItemStack.EMPTY;
-    protected double gravity;
-    protected int life = 10;
+    protected int sinceSpawned;
 
-    public ProjectileEntity(EntityType<? extends Entity> entityType, Level level) {
-        super(entityType, level);
+    public ProjectileEntity(EntityType<? extends ProjectileEntity> type, Level world) {
+        super(type, world);
     }
 
-    public ProjectileEntity(EntityType<? extends Entity> entityType, Level world, LivingEntity shooter, ItemStack weapon, GunWeaponItem item) {
-        this(entityType, world);
-        this.ownerID = shooter.getId();
-        this.owner = shooter;
-        this.gravity = weapon.hasTag() && weapon.getTag().contains("gravity", CompoundTag.TAG_ANY_NUMERIC) ? weapon.getTag().getDouble("gravity") : 0;
-
-        Vec3 dir = getDir(shooter, weapon);
-        double speed = weapon.hasTag() && weapon.getTag().contains("speed", CompoundTag.TAG_ANY_NUMERIC) ? weapon.getTag().getDouble("speed") : 1.0F;
-        this.setDeltaMovement(dir.x * speed, dir.y * speed, dir.z * speed);
-        this.updateHeading();
-
-        double posX = shooter.xOld + (shooter.getX() - shooter.xOld) / 2.0;
-        double posY = shooter.yOld + (shooter.getY() - shooter.yOld) / 2.0 + shooter.getEyeHeight();
-        double posZ = shooter.zOld + (shooter.getZ() - shooter.zOld) / 2.0;
-        this.setPos(posX, posY, posZ);
+    public ProjectileEntity(Level world, LivingEntity shooter) {
+        this(AEEntities.BASIC_BULLET.get(), shooter, world);
     }
 
-    @Override
-    public EntityDimensions getDimensions(Pose pose) {
-        return new EntityDimensions(0.1F, 0.1F, true);
+    protected ProjectileEntity(EntityType<? extends ProjectileEntity> type, LivingEntity shooter, Level world) {
+        this(type, shooter.getX(), shooter.getEyeY() - 0.1, shooter.getZ(), world);
+        setOwner(shooter);
+        setRot(shooter.getYRot(), shooter.getXRot());
     }
 
-    private Vec3 getDir(LivingEntity shooter, ItemStack weapon) {
-        float spread = 0.0F;
-        if(weapon.hasTag() && weapon.getTag().contains("spread", CompoundTag.TAG_ANY_NUMERIC)) {
-            spread = weapon.getTag().getFloat("spread");
+    protected ProjectileEntity(EntityType<? extends ProjectileEntity> type, double x, double y, double z, Level world) {
+        this(type, world);
+        moveTo(x, y, z, getYRot(), getXRot());
+        reapplyPosition();
+    }
+
+    //passthrough
+    protected HitResult getHitResult() {
+        Vec3 pos = position();
+        Vec3 vel = getDeltaMovement();
+        Vec3 nextpos = pos.add(vel);
+        HitResult hitresult = level().clip(new ClipContext(pos, nextpos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+
+        if (!noPhysics && hitresult.getType() != HitResult.Type.MISS) nextpos = hitresult.getLocation();
+
+        HitResult hitresult1 = ProjectileUtil.getEntityHitResult(level(), this, pos, nextpos, getBoundingBox().expandTowards(vel).inflate(1), this::canHitEntity);
+        if (hitresult1 != null) {
+            hitresult = hitresult1;
         }
-        return this.getVectorFromRotation(shooter.getXRot() - spread, shooter.getYRot() - spread);
+
+        return hitresult;
     }
 
-    public void updateHeading()
-    {
-        double horizontalDistance = this.getDeltaMovement().horizontalDistance();
-        this.setYRot((float) (Mth.atan2(this.getDeltaMovement().x(), this.getDeltaMovement().z()) * (180D / Math.PI)));
-        this.setXRot((float) (Mth.atan2(this.getDeltaMovement().y(), horizontalDistance) * (180D / Math.PI)));
-        this.yRotO = this.getYRot();
-        this.xRotO = this.getXRot();
+    private static final double STOP_TRESHOLD = 0.01;
+
+    @SuppressWarnings({ "deprecation", "resource" })
+    @Override
+    public void tick() {
+        //Using a thing I save so that bullets don't get clogged up on chunk borders
+        sinceSpawned++;
+        if (sinceSpawned > 100 || getDeltaMovement().lengthSqr() < STOP_TRESHOLD) {
+            remove(RemovalReason.KILLED);
+        }
+
+        onProjectileTick();
+
+        Entity entity = this.getOwner();
+        if (level().isClientSide || (entity == null || !entity.isRemoved()) && level().hasChunkAt(blockPosition())) {
+            super.tick();
+
+            processCollision();
+
+            checkInsideBlocks();
+            Vec3 vec3 = getDeltaMovement();
+            double nextx = getX() + vec3.x;
+            double nexty = getY() + vec3.y;
+            double nextz = getZ() + vec3.z;
+            ProjectileUtil.rotateTowardsMovement(this, 0.2F);
+            if (isInWater()) {
+                for (int i = 0; i < 4; ++i) {
+                    level().addParticle(ParticleTypes.BUBBLE, nextx - vec3.x * 0.25, nexty - vec3.y * 0.25, nextz - vec3.z * 0.25, vec3.x, vec3.y, vec3.z);
+                }
+
+                setDeltaMovement(vec3.scale(waterInertia()));
+            }
+            level().addParticle(getParticleTrail(), nextx, nexty + 0.5, nextz, 0, 0, 0);
+            setPos(nextx, nexty, nextz);
+        }
+        else {
+            discard();
+        }
+    }
+
+    protected void processCollision() {
+        HitResult hitresult = getHitResult();
+        if (hitresult.getType() != HitResult.Type.MISS && !net.neoforged.neoforge.event.EventHooks.onProjectileImpact(this, hitresult)) {
+            onHit(hitresult);
+        }
+    }
+
+    protected double waterInertia() {
+        //same as fireballs but now it can be changed yay
+        return 0.8;
+    }
+
+    //used for doing stuff on tick, override
+    protected void onProjectileTick() {
+
+    }
+
+    @SuppressWarnings("resource")
+    @Override
+    protected void onHitEntity(EntityHitResult raytrace) {
+        //note: that super is currently empty
+        super.onHitEntity(raytrace);
+        onProjectileHitEntity(raytrace);
+
+        if (!level().isClientSide) {
+            Entity target = raytrace.getEntity();
+            Entity shooter = getOwner();
+
+
+            if (isOnFire()) target.setSecondsOnFire(5);
+            int lastHurtResistant = target.invulnerableTime;
+            target.invulnerableTime = 0;
+            double hitdamage = damage;
+            boolean damaged = shooter == null
+                    ? target.hurt(AEDamage.gun(level().registryAccess()), (float)hitdamage)
+                    : target.hurt(AEDamage.gun(level().registryAccess(), this, shooter), (float)hitdamage);
+            if(shooter != null) {
+                Vec3 eyePos = target.getEyePosition(1.0F);
+                Vec3 lookVec = shooter.getLookAngle();
+
+                this.sendEffectPacket(shooter.level(), eyePos, lookVec);
+            }
+            if (!damaged) target.invulnerableTime = lastHurtResistant;
+        }
+    }
+
+    protected void sendEffectPacket(Level level, Vec3 pos, Vec3 lookVec) {
+        PacketDistributor.NEAR.with(new PacketDistributor.TargetPoint(pos.x, pos.y, pos.z, (double)64.0F, level.dimension())).send(new CustomPacketPayload[]{new BulletEffectPacket(pos, lookVec)});
+    }
+
+    @SuppressWarnings("resource")
+    @Override
+    protected void onHit(HitResult result) {
+        super.onHit(result);
+        //Don't disappear on blocks if we're set to noclipping
+        if (!level().isClientSide && (!noPhysics || result.getType() != HitResult.Type.BLOCK) && shouldDespawnOnHit(result)) remove(RemovalReason.KILLED);
+    }
+
+    //do extra stuff on hit in case you want to keep normal damage functionality
+    protected void onProjectileHitEntity(EntityHitResult result) {
+
+    }
+
+    protected boolean shouldDespawnOnHit(HitResult result) {
+        return true;
+    }
+
+    @SuppressWarnings("resource")
+    @Override
+    protected void onHitBlock(BlockHitResult result) {
+        //noclipping bullets don't interact with blocks
+        if (noPhysics) return;
+        super.onHitBlock(result);
     }
 
     public void setWeapon(ItemStack weapon) {
@@ -74,49 +191,69 @@ public class ProjectileEntity extends Entity implements IEntityWithComplexSpawn 
         return item;
     }
 
-    public double getGravity() {
-        return this.gravity;
+    public double getDamage() {
+        return damage;
     }
 
-    public double getEcheladderBonus(LivingEntity shooter) {
-        if(shooter instanceof ServerPlayer && !(shooter instanceof FakePlayer)) {
-            ServerPlayer player = (ServerPlayer) shooter;
-            return Echeladder.get(player).getUnderlingDamageModifier();
-        }
-        else return 0.0;
-    }
-
-    @Override
-    public void writeSpawnData(FriendlyByteBuf friendlyByteBuf) {
-
-    }
-
-    @Override
-    public void readSpawnData(FriendlyByteBuf friendlyByteBuf) {
-
+    public void setDamage(double damage) {
+        this.damage = damage;
     }
 
     @Override
     protected void defineSynchedData() {
-
+        this.getEntityData().define(DATA_ITEM_STACK, ItemStack.EMPTY);
     }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag compoundTag) {
-
+        super.readAdditionalSaveData(compoundTag);
+        sinceSpawned = compoundTag.getInt("tsf");
+        damage = compoundTag.getDouble("damage");
+        setWeapon(ItemStack.of(compoundTag.getCompound("Item")));
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag compoundTag) {
-
+        super.addAdditionalSaveData(compoundTag);
+        compoundTag.putDouble("damage", damage);
+        compoundTag.putInt("tsf", sinceSpawned);
+        ItemStack stack = getWeapon();
+        if(!stack.isEmpty()) compoundTag.put("Item", stack.save(new CompoundTag()));
     }
 
-    private Vec3 getVectorFromRotation(float pitch, float yaw)
-    {
-        float f = Mth.cos(-yaw * 0.017453292F - (float) Math.PI);
-        float f1 = Mth.sin(-yaw * 0.017453292F - (float) Math.PI);
-        float f2 = -Mth.cos(-pitch * 0.017453292F);
-        float f3 = Mth.sin(-pitch * 0.017453292F);
-        return new Vec3((double) (f1 * f2), (double) f3, (double) (f * f2));
+    @Override
+    //Same as normal but ignores player velocity
+    public void shootFromRotation(Entity shooter, float xRot, float yRot, float upArc, float speed, float spread) {
+        float f = -Mth.sin(yRot * Mth.DEG_TO_RAD) * Mth.cos(xRot * Mth.DEG_TO_RAD);
+        float f1 = -Mth.sin((xRot + upArc) * Mth.DEG_TO_RAD);
+        float f2 = Mth.cos(yRot * Mth.DEG_TO_RAD) * Mth.cos(xRot * Mth.DEG_TO_RAD);
+        shoot((double) f, (double) f1, (double) f2, speed, spread);
+    }
+
+    @Override
+    public boolean isPickable() {
+        return false;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        return false;
+    }
+
+    @Override
+    public boolean shouldRenderAtSqrDistance(double sqrDistance) {
+        double d0 = getBoundingBox().getSize() * 4;
+        if (Double.isNaN(d0)) d0 = 4;
+        d0 *= 64;
+        return sqrDistance < d0 * d0;
+    }
+
+    @Override
+    public ItemStack getItem() {
+        return new ItemStack(AEItems.DUMMY_BULLET.get());
+    }
+
+    protected ParticleOptions getParticleTrail() {
+        return ParticleTypes.SMOKE;
     }
 }
