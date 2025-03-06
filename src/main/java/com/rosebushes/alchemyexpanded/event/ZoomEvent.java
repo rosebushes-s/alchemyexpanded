@@ -1,7 +1,7 @@
 package com.rosebushes.alchemyexpanded.event;
 
 import com.rosebushes.alchemyexpanded.client.util.AEKeyHandler;
-import com.rosebushes.alchemyexpanded.item.weapon.ScopedGunWeaponItem;
+import com.rosebushes.alchemyexpanded.item.weapon.gun.ScopedGunWeaponItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;

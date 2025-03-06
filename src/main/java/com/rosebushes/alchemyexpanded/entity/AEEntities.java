@@ -2,6 +2,7 @@ package com.rosebushes.alchemyexpanded.entity;
 
 import com.mraof.minestuck.entity.item.BarbasolBombEntity;
 import com.mraof.minestuck.entity.item.ConsumableProjectileEntity;
+import com.rosebushes.alchemyexpanded.item.weapon.CandyYoYoWeaponItem;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -14,6 +15,9 @@ import java.util.function.Supplier;
 
 public final class AEEntities {
     public static final DeferredRegister<EntityType<?>> REGISTER;
+    public static final Supplier<EntityType<YoYoProjectileEntity>> YOYO_PROJECTILE;
+    public static final Supplier<EntityType<CandyYoYoProjectileEntity>> CANDY_YOYO_PROJECTILE;
+    public static final Supplier<EntityType<FireYoYoProjectileEntity>> FIRE_YOYO_PROJECTILE;
     public static final Supplier<EntityType<ProjectileEntity>> BASIC_BULLET;
     public static final Supplier<EntityType<CandyProjectileEntity>> CANDY_BULLET;
     public static final Supplier<EntityType<TeleportProjectileEntity>> GREEN_SUN_BULLET;
@@ -26,6 +30,11 @@ public final class AEEntities {
 
     static {
         REGISTER = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, "alchemyexpanded");
+
+        YOYO_PROJECTILE = REGISTER.register("yoyo", () -> EntityType.Builder.<YoYoProjectileEntity>of(YoYoProjectileEntity::new, MobCategory.MISC).sized(0.75F, 0.75F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "yoyo")).toString()));
+        CANDY_YOYO_PROJECTILE = REGISTER.register("candy_yoyo", () -> EntityType.Builder.<CandyYoYoProjectileEntity>of(CandyYoYoProjectileEntity::new, MobCategory.MISC).sized(0.75F, 0.75F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "candy_yoyo")).toString()));
+        FIRE_YOYO_PROJECTILE = REGISTER.register("fire_yoyo", () -> EntityType.Builder.<FireYoYoProjectileEntity>of(FireYoYoProjectileEntity::new, MobCategory.MISC).sized(0.75F, 0.75F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "fire_yoyo").toString())));
+
         BASIC_BULLET = REGISTER.register("bullet", () -> EntityType.Builder.<ProjectileEntity>of(ProjectileEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "bullet")).toString()));
         CANDY_BULLET = REGISTER.register("candy_bullet", () -> EntityType.Builder.<CandyProjectileEntity>of(CandyProjectileEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "candy_bullet")).toString()));
         GREEN_SUN_BULLET = REGISTER.register("green_sun_bullet", () -> EntityType.Builder.<TeleportProjectileEntity>of(TeleportProjectileEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).setTrackingRange(64).setUpdateInterval(2).fireImmune().build((new ResourceLocation("alchemyexpanded", "green_sun_bullet")).toString()));

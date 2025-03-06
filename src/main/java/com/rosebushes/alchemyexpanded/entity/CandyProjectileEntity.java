@@ -26,12 +26,12 @@ public class CandyProjectileEntity extends ProjectileEntity {
 
     @Override
     protected void onProjectileHitEntity(EntityHitResult result) {
-        super.onProjectileHitEntity(result);
         Entity entity = result.getEntity();
 
         if(entity instanceof UnderlingEntity) {
             ((UnderlingEntity) entity).dropCandy = true;
         }
+        super.onProjectileHitEntity(result);
     }
 
     @Override

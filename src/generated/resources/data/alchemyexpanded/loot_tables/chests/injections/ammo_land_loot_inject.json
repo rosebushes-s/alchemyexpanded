@@ -19,7 +19,7 @@
           ],
           "name": "alchemyexpanded:ammo",
           "quality": 1,
-          "weight": 10
+          "weight": 14
         },
         {
           "type": "minecraft:item",
@@ -36,7 +36,7 @@
           ],
           "name": "alchemyexpanded:flare",
           "quality": 1,
-          "weight": 3
+          "weight": 8
         },
         {
           "type": "minecraft:item",
@@ -53,7 +53,7 @@
           ],
           "name": "alchemyexpanded:laser_ammo",
           "quality": 1,
-          "weight": 3
+          "weight": 8
         },
         {
           "type": "minecraft:item",
@@ -70,7 +70,7 @@
           ],
           "name": "alchemyexpanded:dito",
           "quality": 1,
-          "weight": 5
+          "weight": 10
         },
         {
           "type": "minecraft:item",

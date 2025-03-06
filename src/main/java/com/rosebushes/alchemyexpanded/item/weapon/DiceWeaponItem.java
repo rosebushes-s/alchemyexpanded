@@ -1,8 +1,6 @@
 package com.rosebushes.alchemyexpanded.item.weapon;
 
-import com.rosebushes.alchemyexpanded.util.DiceEffect;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
+import com.rosebushes.alchemyexpanded.util.DiceEffectHelper;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -25,7 +23,7 @@ public class DiceWeaponItem extends Item {
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        DiceEffect dice = new DiceEffect();
+        DiceEffectHelper dice = new DiceEffectHelper();
 
         float damage = dice.getDiceDamage(diceAmount, diceValue, diceDamage, attacker, target, enchanted);
         if(attacker instanceof Player) {
@@ -34,7 +32,7 @@ public class DiceWeaponItem extends Item {
         else {
             target.hurt(attacker.damageSources().mobAttack(attacker), damage);
         }
-        stack.hurtAndBreak(1, attacker, (PlayerEntity) -> PlayerEntity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+        stack.hurtAndBreak(1, attacker, (PlayerEntity) -> attacker.broadcastBreakEvent(EquipmentSlot.MAINHAND));
         return true;
     }
 

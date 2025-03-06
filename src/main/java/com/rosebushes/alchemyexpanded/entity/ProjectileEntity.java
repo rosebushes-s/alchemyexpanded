@@ -136,14 +136,17 @@ public class ProjectileEntity extends Projectile implements ItemSupplier {
             Entity target = raytrace.getEntity();
             Entity shooter = getOwner();
 
-
             if (isOnFire()) target.setSecondsOnFire(5);
             int lastHurtResistant = target.invulnerableTime;
             target.invulnerableTime = 0;
-            double hitdamage = damage;
+            double hitdamage = this.damage;
+            float adjustedDamage = this.sinceSpawned > 20 ? (float) hitdamage * 0.5F : (float) hitdamage;
+            if(this.sinceSpawned > 30) {
+                adjustedDamage = (float) hitdamage * 0.25F;
+            }
             boolean damaged = shooter == null
-                    ? target.hurt(AEDamage.gun(level().registryAccess()), (float)hitdamage)
-                    : target.hurt(AEDamage.gun(level().registryAccess(), this, shooter), (float)hitdamage);
+                    ? target.hurt(AEDamage.gun(level().registryAccess()), adjustedDamage)
+                    : target.hurt(AEDamage.gun(level().registryAccess(), this, shooter), adjustedDamage);
             if(shooter != null) {
                 Vec3 eyePos = target.getEyePosition(1.0F);
                 Vec3 lookVec = shooter.getLookAngle();

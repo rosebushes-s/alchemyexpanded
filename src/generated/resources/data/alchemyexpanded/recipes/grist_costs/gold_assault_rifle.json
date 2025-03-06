@@ -2,8 +2,8 @@
   "type": "minestuck:grist_cost",
   "grist_cost": {
     "minestuck:build": 174,
-    "minestuck:ruby": 42,
-    "minestuck:rust": 86
+    "minestuck:gold": 86,
+    "minestuck:ruby": 42
   },
   "ingredient": {
     "item": "alchemyexpanded:gold_assault_rifle"
